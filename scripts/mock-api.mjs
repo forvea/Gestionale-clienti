@@ -14,9 +14,9 @@ const PORT = Number(process.env.MOCK_PORT ?? 5099);
 const TOKEN = "mock-token";
 
 const services = [
-  { id: "s1", name: "Taglio", category: "Capelli", description: null, durationMinutes: 30, basePrice: 18, parallelSlots: 1, bufferEnabled: false, bufferMinutes: 0, bufferPosition: "after", active: true, displayOrder: 1, deletedAt: null, color: "#2563eb" },
-  { id: "s2", name: "Barba", category: "Barba", description: null, durationMinutes: 20, basePrice: 12, parallelSlots: 1, bufferEnabled: false, bufferMinutes: 0, bufferPosition: "after", active: true, displayOrder: 2, deletedAt: null, color: "#16a34a" },
-  { id: "s3", name: "Taglio + Barba", category: "Combo", description: null, durationMinutes: 50, basePrice: 28, parallelSlots: 1, bufferEnabled: false, bufferMinutes: 0, bufferPosition: "after", active: true, displayOrder: 3, deletedAt: null, color: null },
+  { id: "s1", name: "Taglio", category: "Capelli", description: null, durationMinutes: 30, basePrice: 18, parallelSlots: 1, bufferEnabled: false, bufferMinutes: 0, bufferPosition: "After", active: true, displayOrder: 1, deletedAt: null, color: "#2563eb" },
+  { id: "s2", name: "Barba", category: "Barba", description: null, durationMinutes: 20, basePrice: 12, parallelSlots: 1, bufferEnabled: false, bufferMinutes: 0, bufferPosition: "After", active: true, displayOrder: 2, deletedAt: null, color: "#16a34a" },
+  { id: "s3", name: "Taglio + Barba", category: "Combo", description: null, durationMinutes: 50, basePrice: 28, parallelSlots: 1, bufferEnabled: false, bufferMinutes: 0, bufferPosition: "After", active: true, displayOrder: 3, deletedAt: null, color: null },
 ];
 const hours = Array.from({ length: 7 }, (_, d) => ({ dayOfWeek: d, isAvailable: d !== 0, startTime: d === 0 ? null : "09:00", endTime: d === 0 ? null : "19:00" }));
 const staff = [
@@ -29,6 +29,12 @@ const customers = [
   { id: "c2", name: "Andrea Conti", phone: "3334445556", email: null, notes: "Preferisce il mattino", regular: false, blocked: false, createdAt: now, updatedAt: now, deletedAt: null },
   { id: "c3", name: "Sara Ferrari", phone: null, email: "sara.ferrari@example.invalid", notes: null, regular: false, blocked: true, createdAt: now, updatedAt: now, deletedAt: null },
 ];
+const tenantHours = Array.from({ length: 7 }, (_, d) => ({ dayOfWeek: d, isOpen: d !== 0, openTime: d === 0 ? null : "09:00", closeTime: d === 0 ? null : "19:00" }));
+const tenantBreaks = [{ dayOfWeek: 1, startTime: "13:00", endTime: "14:00", label: "Pranzo" }];
+const staffBreaks = {};
+const timeOff = {};
+const closures = [{ id: "cl1", dateFrom: "2026-12-25", dateTo: "2026-12-26", reason: "Natale", recurrence: "annual" }];
+const timeBlocks = [];
 const today = new Date().toLocaleDateString("sv-SE");
 const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("sv-SE");
 const bookings = [
@@ -87,8 +93,72 @@ createServer(async (req, res) => {
   if (req.headers.authorization !== `Bearer ${TOKEN}`) return err(res, 401, "unauthorized", "Token mancante o non valido.");
 
   if (p === "/api/v1/admin/account/me") return json(res, 200, { userId: "u1", email: "titolare@barberia-demo.invalid", role: "Owner", active: true, activatedAt: now, lastLoginAt: now, createdAt: now, tenantId: "t1", tenantName: "Barberia Demo", tenantSlug: "barberia-demo" });
-  if (p === "/api/v1/admin/services") return json(res, 200, services);
-  if (p === "/api/v1/admin/staff") return json(res, 200, staff);
+  // ── services ──
+  const visibleServices = () => q.get("includeDeleted") === "true" ? services : services.filter((s) => !s.deletedAt);
+  const serviceFromBody = (id) => ({ id, name: body.name, category: body.category ?? null, description: body.description ?? null, durationMinutes: body.durationMinutes, basePrice: body.basePrice ?? null, parallelSlots: body.parallelSlots ?? 1, bufferEnabled: !!body.bufferEnabled, bufferMinutes: body.bufferMinutes ?? 0, bufferPosition: body.bufferPosition ?? "After", active: body.active ?? true, displayOrder: body.displayOrder ?? 0, deletedAt: null, color: body.color ?? null });
+  if (p === "/api/v1/admin/services" && req.method === "GET") return json(res, 200, visibleServices());
+  if (p === "/api/v1/admin/services" && req.method === "POST") {
+    if (!body.name) return err(res, 422, "validation_error", "Dati non validi.", { name: ["Il nome è obbligatorio."] });
+    if (!(body.durationMinutes > 0)) return err(res, 422, "validation_error", "La durata deve essere > 0.");
+    const s = serviceFromBody(randomUUID()); services.push(s); return json(res, 201, s);
+  }
+  const svm = p.match(/^\/api\/v1\/admin\/services\/([^/]+)$/);
+  if (svm) {
+    const s = services.find((x) => x.id === svm[1] && !x.deletedAt);
+    if (!s) return err(res, 404, "not_found", "Servizio non trovato.");
+    if (req.method === "GET") return json(res, 200, s);
+    if (req.method === "DELETE") { s.deletedAt = new Date().toISOString(); return json(res, 204); }
+    if (req.method === "PUT") {
+      if (!body.name) return err(res, 422, "validation_error", "Dati non validi.", { name: ["Il nome è obbligatorio."] });
+      Object.assign(s, serviceFromBody(s.id)); return json(res, 200, s);
+    }
+  }
+
+  // ── staff ──
+  const visibleStaff = () => q.get("includeDeleted") === "true" ? staff : staff.filter((s) => !s.deletedAt);
+  const staffFromBody = (id) => ({ id, name: body.name, role: body.role ?? null, specialization: body.specialization ?? null, photoUrl: null, active: body.active ?? true, displayOrder: body.displayOrder ?? 0, services: body.services ?? [], businessHours: body.businessHours, deletedAt: null, businessHoursConfigured: true });
+  const weekError = (h) => (!Array.isArray(h) || h.length !== 7 || new Set(h.map((x) => x.dayOfWeek)).size !== 7) ? "businessHours: sono richiesti tutti e 7 i giorni (0..6), con isAvailable esplicito." : null;
+  if (p === "/api/v1/admin/staff" && req.method === "GET") return json(res, 200, visibleStaff());
+  if (p === "/api/v1/admin/staff" && req.method === "POST") {
+    if (!body.name) return err(res, 422, "validation_error", "Dati non validi.", { name: ["Il nome è obbligatorio."] });
+    const we = weekError(body.businessHours); if (we) return err(res, 422, "validation_error", we, { businessHours: [we] });
+    const s = staffFromBody(randomUUID()); staff.push(s); return json(res, 201, s);
+  }
+  const stm = p.match(/^\/api\/v1\/admin\/staff\/([^/]+)(?:\/(breaks|time-off)(?:\/([^/]+))?)?$/);
+  if (stm) {
+    const s = staff.find((x) => x.id === stm[1] && !x.deletedAt);
+    if (!s) return err(res, 404, "not_found", "Operatore non trovato.");
+    if (!stm[2]) {
+      if (req.method === "GET") return json(res, 200, s);
+      if (req.method === "DELETE") { s.deletedAt = new Date().toISOString(); return json(res, 204); }
+      if (req.method === "PUT") {
+        const we = weekError(body.businessHours); if (we) return err(res, 422, "validation_error", we, { businessHours: [we] });
+        Object.assign(s, staffFromBody(s.id)); return json(res, 200, s);
+      }
+    }
+    if (stm[2] === "breaks" && req.method === "PUT") { staffBreaks[s.id] = body.breaks ?? []; return json(res, 204); }
+    if (stm[2] === "time-off") {
+      timeOff[s.id] ??= [];
+      if (req.method === "GET") return json(res, 200, timeOff[s.id]);
+      if (req.method === "POST") { const t = { id: randomUUID(), dateFrom: body.dateFrom, dateTo: body.dateTo, startTime: body.startTime ?? null, endTime: body.endTime ?? null, reason: body.reason ?? null }; timeOff[s.id].push(t); return json(res, 201, t); }
+      if (req.method === "DELETE") { const i = timeOff[s.id].findIndex((t) => t.id === stm[3]); if (i < 0) return err(res, 404, "not_found", "Assenza non trovata."); timeOff[s.id].splice(i, 1); return json(res, 204); }
+    }
+  }
+
+  // ── schedule ──
+  if (p === "/api/v1/admin/business-hours" && req.method === "GET") return json(res, 200, { configured: true, days: tenantHours });
+  if (p === "/api/v1/admin/business-hours" && req.method === "PUT") { tenantHours.splice(0, 7, ...body.days); return json(res, 204); }
+  if (p === "/api/v1/admin/breaks" && req.method === "GET") return json(res, 200, { tenant: tenantBreaks, staff: staff.filter((s) => !s.deletedAt).map((s) => ({ staffId: s.id, staffName: s.name, breaks: staffBreaks[s.id] ?? [] })) });
+  if (p === "/api/v1/admin/breaks/tenant" && req.method === "PUT") { tenantBreaks.splice(0, tenantBreaks.length, ...(body.breaks ?? [])); return json(res, 204); }
+  if (p === "/api/v1/admin/closures" && req.method === "GET") return json(res, 200, closures);
+  if (p === "/api/v1/admin/closures" && req.method === "POST") { const c = { id: randomUUID(), dateFrom: body.dateFrom, dateTo: body.dateTo, reason: body.reason ?? null, recurrence: body.recurrence ?? "none" }; closures.push(c); return json(res, 201, c); }
+  const clm = p.match(/^\/api\/v1\/admin\/closures\/([^/]+)$/);
+  if (clm && req.method === "DELETE") { const i = closures.findIndex((c) => c.id === clm[1]); if (i < 0) return err(res, 404, "not_found", "Chiusura non trovata."); closures.splice(i, 1); return json(res, 204); }
+  if (p === "/api/v1/admin/time-blocks" && req.method === "GET") return json(res, 200, timeBlocks);
+  if (p === "/api/v1/admin/time-blocks" && req.method === "POST") { const t = { id: randomUUID(), ...body, reason: body.reason ?? null }; timeBlocks.push(t); return json(res, 201, t); }
+  const tbm = p.match(/^\/api\/v1\/admin\/time-blocks\/([^/]+)$/);
+  if (tbm && req.method === "DELETE") { const i = timeBlocks.findIndex((c) => c.id === tbm[1]); if (i < 0) return err(res, 404, "not_found", "Blocco non trovato."); timeBlocks.splice(i, 1); return json(res, 204); }
+  if (p === "/api/v1/admin/holidays") { const y = q.get("year") ?? new Date().getFullYear(); return json(res, 200, [{ date: `${y}-01-01`, name: "Capodanno", recurrence: "annual" }, { date: `${y}-04-25`, name: "Liberazione", recurrence: "annual" }, { date: `${y}-08-15`, name: "Ferragosto", recurrence: "annual" }, { date: `${y}-12-25`, name: "Natale", recurrence: "annual" }, { date: `${y}-04-05`, name: "Pasqua", recurrence: "easter" }, { date: `${y}-04-06`, name: "Lunedì dell'Angelo", recurrence: "easter_monday" }]); }
 
   if (p === "/api/v1/admin/availability") {
     const date = q.get("dateFrom");

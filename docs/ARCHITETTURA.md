@@ -134,12 +134,15 @@ src/
 │   ├── api.ts                       client dell'Admin API (server-only)
 │   ├── session.ts                   lettura/scrittura/cancellazione del cookie di sessione
 │   ├── types.ts                     tipi TS specchio 1:1 dei DTO C# (camelCase)
-│   ├── format.ts                    date/orari/prezzi it-IT, etichette per stati e cause
+│   ├── format.ts                    date/orari/prezzi it-IT, etichette per stati, cause, giorni
+│   ├── week.ts                      lettura dei campi di WeekHoursEditor/BreaksEditor nelle azioni
 │   └── action-state.ts              ActionState, idleState, formValues (vedi §7)
 ├── components/
 │   ├── ui.tsx                       primitive: Button, Input, Select, Field, Card, Alert, Badge, …
 │   ├── Shell.tsx                    sidebar (drawer su mobile) + header + area contenuto
-│   └── StatusBadge.tsx              badge colorato per lo stato prenotazione
+│   ├── StatusBadge.tsx              badge colorato per lo stato prenotazione
+│   ├── WeekHoursEditor.tsx          7 righe giorno/interruttore/inizio/fine (salone e operatori)
+│   └── BreaksEditor.tsx             righe di pausa aggiungibili/rimovibili
 └── app/
     ├── layout.tsx                   <html lang="it">, font Inter
     ├── page.tsx                     redirect a /agenda
@@ -159,11 +162,22 @@ src/
         │   ├── [id]/page.tsx        dettaglio (Server Component)
         │   ├── [id]/BookingActions.tsx  le quattro card di azione (Client Component)
         │   └── nuova/page.tsx · NewBookingForm.tsx
-        └── clienti/
-            ├── page.tsx             elenco con ricerca
-            ├── actions.ts           createCustomer, updateCustomer, deleteCustomer
-            ├── [id]/page.tsx · CustomerForms.tsx
-            └── nuovo/page.tsx · NewCustomerForm.tsx
+        ├── clienti/
+        │   ├── page.tsx             elenco con ricerca
+        │   ├── actions.ts           createCustomer, updateCustomer, deleteCustomer
+        │   ├── [id]/page.tsx · CustomerForms.tsx
+        │   └── nuovo/page.tsx · NewCustomerForm.tsx
+        ├── servizi/
+        │   ├── page.tsx · ServiceForm.tsx (nuovo e modifica)
+        │   ├── actions.ts           createService, updateService, deleteService
+        │   └── [id]/page.tsx · nuovo/page.tsx
+        ├── operatori/
+        │   ├── page.tsx · StaffForm.tsx · StaffExtras.tsx (pause, assenze)
+        │   ├── actions.ts           createStaff, updateStaff, deleteStaff, saveStaffBreaks, addTimeOff, deleteTimeOff
+        │   └── [id]/page.tsx · nuovo/page.tsx
+        └── orari/
+            ├── page.tsx · OrariForms.tsx
+            └── actions.ts           saveBusinessHours, saveTenantBreaks, addClosure, deleteClosure, addTimeBlock, deleteTimeBlock
 scripts/mock-api.mjs                 finto Backend in memoria (vedi §8)
 Dockerfile · .dockerignore           immagine di produzione (vedi §9)
 ```
@@ -244,6 +258,40 @@ Il canale amministrativo: prenotazione presa **al telefono o allo sportello**.
 "Segnalato" (`blocked`) è una **nota per il salone**, non un divieto: il Backend non rifiuta prenotazioni
 di un cliente segnalato, e il pannello lo dice sotto la casella.
 
+### Servizi (`/servizi`)
+
+| Funzione | Endpoint | Note |
+|---|---|---|
+| Elenco | `GET /services` | Durata, prezzo, buffer, capienza, stato, colore. `?archiviati=1` → `includeDeleted=true`, gli eliminati compaiono barrati |
+| Nuovo | `POST /services` | Nome, categoria, descrizione, durata, prezzo, prenotazioni in parallelo, buffer (minuti + posizione), attivo, ordine, colore |
+| Modifica | `PUT /services/{id}` | **Sostituzione completa**: il form invia sempre tutti i campi (§6). Il colore viaggia solo se la casella "usa un colore" è accesa: il selettore nativo emette sempre un valore |
+| Elimina | `DELETE /services/{id}` | Con conferma. Soft delete: le prenotazioni restano; non c'è ripristino |
+
+### Operatori (`/operatori`)
+
+| Funzione | Endpoint | Note |
+|---|---|---|
+| Elenco | `GET /staff` + `GET /services?includeDeleted=true` | Ruolo, servizi eseguiti, giorni lavorati; `?archiviati=1` |
+| Nuovo | `POST /staff` | Dati, servizi eseguiti con prezzo personalizzato opzionale, **settimana intera** (7 giorni con "lavora" esplicito; un nuovo operatore parte dagli orari del salone) |
+| Modifica | `PUT /staff/{id}` | Sostituzione completa. Un operatore senza orari propri (dati anteriori al 2026-09-02) mostra un avviso: salvando gli orari diventano espliciti |
+| Pause ricorrenti | `PUT /staff/{id}/breaks` | Griglia sostituita in blocco; si sommano alle pause del salone |
+| Assenze | `GET|POST /staff/{id}/time-off`, `DELETE …/{timeOffId}` | Giornata intera o fascia; motivo solo a categoria chiusa (ferie, malattia, permesso, altro), mai testo libero |
+| Elimina | `DELETE /staff/{id}` | Con conferma, soft delete |
+
+### Orari e chiusure (`/orari`)
+
+| Funzione | Endpoint | Note |
+|---|---|---|
+| Orari di apertura | `GET|PUT /business-hours` | 7 giorni; avviso se mai configurati (salone non prenotabile). Cambiarli **non** aggiorna gli operatori, che hanno orari propri |
+| Pause del salone | `GET /breaks`, `PUT /breaks/tenant` | Valgono per tutti gli operatori |
+| Chiusure straordinarie | `GET|POST /closures`, `DELETE /closures/{id}` | Una tantum, ogni anno (può scavalcare Capodanno), Pasqua, Pasquetta. Le passate restano visibili, marcate |
+| Festività suggerite | `GET /holidays?year=` | Anno corrente + prossimo, dedotte quelle già registrate e quelle passate. Un click crea la chiusura ricorrente con il nome della festività |
+| Blocchi orari | `GET|POST /time-blocks`, `DELETE /time-blocks/{id}` | Fascia non prenotabile per tutto il salone in uno o più giorni. Il motivo non è mostrato ai clienti |
+
+Tutto ciò che rende non prenotabile del tempo per l'**intero salone** sta in questa pagina; ciò che riguarda
+un **singolo operatore** (pause, assenze) sta nella sua scheda. È la stessa distinzione che il Backend fa
+fra i suoi cinque strumenti di indisponibilità.
+
 ### Trasversali
 
 - **Interfaccia in italiano**, incluse le etichette di stati, cause di indisponibilità, modalità e canali
@@ -271,6 +319,15 @@ diverso dallo snapshot viene inviato, tutto il resto è `null`. Se nulla è camb
 
 Caso particolare: il **telefono di una prenotazione** non è svuotabile (422 lato Backend). Se l'utente lo
 cancella, l'azione lo lascia invariato invece di mandare `""`.
+
+### PUT: sostituzione completa (servizi, operatori, orari, pause)
+
+L'opposto del `PATCH`. `PUT /services/{id}`, `PUT /staff/{id}`, `PUT /business-hours`, `PUT /breaks/*`
+**sostituiscono** la risorsa: un campo omesso viene azzerato, non lasciato com'era. Per questo i form di
+servizi e operatori inviano sempre tutti i campi e l'azione costruisce il body intero, senza snapshot. Un
+dettaglio che ne discende: un `<input disabled>` non viene inviato, quindi quando il buffer di un servizio
+è spento il form aggiunge campi nascosti con valori validi (0 minuti, "After") invece di lasciare il
+Backend senza quei campi.
 
 ### Le regole le applica il Backend, il frontend le mostra
 
@@ -325,6 +382,17 @@ toglie davvero.
 **Le righe dell'agenda su schermi stretti.** Con `flex-wrap` e il blocco del nome a `flex-1`, telefono e
 prezzo si prendevano lo spazio e il nome diventava "Gi…". Il blocco ha ora `min-w-48` e il telefono è
 nascosto sotto `sm`: prezzo e stato vanno a capo, il nome si legge. Visto a 390px, non dedotto.
+
+**Nel markup server-side React separa i nodi di testo adiacenti con `<!-- -->`.** `{a}–{b}` esce come
+`13:00<!-- -->–<!-- -->14:00`: un test che cerca la stringa nell'HTML grezzo non la trova, pur essendo
+corretta a schermo. Le asserzioni sul contenuto usano il testo renderizzato (`inner_text`), non `content()`.
+
+**Mai un `<form>` dentro un altro.** Il browser scarta il form annidato in silenzio. La card "Elimina" di
+servizi e operatori sta fuori dal form principale, e i pulsanti di rimozione delle righe (assenze,
+chiusure, blocchi) sono ciascuno un form a sé.
+
+**I tipi delle rotte (`PageProps<"/rotta">`) vengono generati da `next build`.** Dopo aver aggiunto una
+pagina `tsc` fallisce finché non si è fatto un build: non è un errore del codice.
 
 **`cache: "no-store"` su ogni chiamata** e `revalidatePath` dopo ogni mutazione: un gestionale mostra
 sempre lo stato attuale. Le pagine sono tutte dinamiche (`ƒ` nel report di build), tranne login e 404.
@@ -381,16 +449,14 @@ Due cose imparate deployando altri servizi Forvea su Railway, valide anche qui:
 
 ## 10. Cosa NON fa, e cosa aggiungere dopo
 
-Scelte di scope dell'MVP, non dimenticanze. Il Backend espone già tutto il necessario: si tratta solo di
+Scelte di scope, non dimenticanze. Servizi, operatori, orari, pause, chiusure, blocchi e assenze sono
+coperti dal 2026-09-10. Il Backend espone già tutto il necessario: si tratta solo di
 aggiungere pagine.
 
 | Area | Endpoint già disponibili |
 |---|---|
-| Servizi (CRUD, colore, buffer) | `GET|POST|PUT|DELETE /admin/services` |
-| Operatori (CRUD, orari settimanali, servizi eseguiti) | `/admin/staff`, `/admin/staff/{id}/breaks` |
-| Orari del salone, pause ricorrenti | `/admin/business-hours`, `/admin/breaks/tenant` |
-| Chiusure (anche ricorrenti/pasquali), blocchi orari, festività | `/admin/closures`, `/admin/time-blocks`, `/admin/holidays` |
-| Assenze operatori | `/admin/staff/{id}/time-off`, `/admin/time-off` |
+| Vista aggregata delle assenze di tutti gli operatori | `GET /admin/time-off` (oggi le assenze si vedono solo per operatore) |
+| Foto dell'operatore | `photoUrl` su `/admin/staff` (il form lo invia sempre `null`) |
 | Impostazioni salone (indirizzo, colore, logo, interruttori email, link recensioni) | `GET|PATCH /admin/tenant`, `POST /admin/tenant/logo` |
 | Unione schede duplicate, scoperta duplicati, export CSV | `/admin/customers/{id}/merge`, `/duplicates`, `/export` |
 | Registro di audit | `GET /admin/audit-log` |

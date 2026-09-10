@@ -17,8 +17,9 @@ Pannello web Next.js 16 per il titolare di un salone, collegato all'Admin API de
 - **Un solo punto di contatto con l'API**: `src/lib/api.ts`. **Un solo posto per i tipi**: `src/lib/types.ts`.
 - **Le regole le applica il Backend**: disponibilità, stati, validazioni. Qui si mostrano i suoi messaggi,
   non si reinventano.
-- **PATCH per differenza**: `null` = non toccare, `""` = svuota. Si invia solo ciò che è cambiato rispetto
-  allo snapshot mostrato nel form.
+- **PATCH per differenza** (clienti, recapiti): `null` = non toccare, `""` = svuota. Si invia solo ciò che
+  è cambiato rispetto allo snapshot mostrato nel form. **PUT = sostituzione completa** (servizi, operatori,
+  orari, pause): il form invia sempre tutti i campi.
 - **Ogni azione fallita restituisce `values`** (`formValues(formData)`), perché React 19 azzera il form
   dopo ogni Server Action. Mai la password.
 - `ActionState`/`idleState` vivono in `src/lib/action-state.ts`: un modulo `"use server"` può esportare
@@ -36,8 +37,9 @@ nel browser (vedi `docs/ARCHITETTURA.md` §8). Guarda gli screenshot, non contar
 
 ## Stato
 
-MVP completo e verificato end-to-end sul mock (2026-09-10): login, agenda con filtri, dettaglio con
-cambio stato / spostamento / cambio operatore / recapiti, nuova prenotazione, clienti (elenco, scheda,
-modifica, archiviazione, nuova scheda), mobile. Le aree non ancora coperte (servizi, operatori, orari,
-chiusure, impostazioni, GDPR, calendario a griglia) sono elencate in `docs/ARCHITETTURA.md` §10 con gli
-endpoint già pronti lato Backend.
+Verificato end-to-end sul mock (2026-09-10): login, agenda con filtri, dettaglio con cambio stato /
+spostamento / cambio operatore / recapiti, nuova prenotazione, clienti (elenco, scheda, modifica,
+archiviazione, nuova scheda), servizi (CRUD), operatori (CRUD + orari settimanali + pause + assenze),
+orari e chiusure (orari, pause, chiusure con festività suggerite, blocchi), mobile. Le aree non ancora
+coperte (impostazioni salone, GDPR, calendario a griglia, cambio password) sono in `docs/ARCHITETTURA.md`
+§10 con gli endpoint già pronti lato Backend. Per consegnarlo a un salone: `docs/GUIDA_CONSEGNA.md`.

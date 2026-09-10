@@ -13,6 +13,9 @@ import { cx } from "./ui";
 const NAV = [
   { href: "/agenda", label: "Agenda", icon: "📅" },
   { href: "/clienti", label: "Clienti", icon: "👥" },
+  { href: "/servizi", label: "Servizi", icon: "✂️" },
+  { href: "/operatori", label: "Operatori", icon: "🧑‍💼" },
+  { href: "/orari", label: "Orari e chiusure", icon: "🕒" },
 ] as const;
 
 export function Shell({

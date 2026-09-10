@@ -96,9 +96,13 @@ src/
     ├── api/                  Route Handler interni (disponibilità, ricerca clienti)
     └── (app)/                pagine autenticate
         ├── agenda/           elenco, dettaglio + azioni, nuova prenotazione
-        └── clienti/          elenco, scheda, nuovo cliente
+        ├── clienti/          elenco, scheda, nuovo cliente
+        ├── servizi/          catalogo, nuovo, modifica
+        ├── operatori/        elenco, nuovo, scheda (orari, servizi, pause, assenze)
+        └── orari/            orari di apertura, pause, chiusure, blocchi
 scripts/mock-api.mjs          finto Backend per lo sviluppo
 docs/ARCHITETTURA.md          come è fatto, perché, e cosa fa
+docs/GUIDA_CONSEGNA.md        come consegnarlo a un salone e come si usa
 ```
 
 ## Funzionalità (riassunto)
@@ -114,6 +118,11 @@ docs/ARCHITETTURA.md          come è fatto, perché, e cosa fa
   dell'informativa privacy, override delle email automatiche.
 - **Clienti**: elenco con ricerca e paginazione, scheda con storico prenotazioni e conteggio dei mancati
   arrivi, modifica, flag "abituale" e "segnalato", archiviazione con conferma, nuova scheda.
+- **Servizi**: catalogo con durata, prezzo, buffer, capienza, colore; creazione, modifica, eliminazione.
+- **Operatori**: dati, servizi eseguiti con prezzo personalizzato, orari settimanali completi, pause
+  ricorrenti, assenze (giornata o fascia, motivo a categoria), eliminazione.
+- **Orari e chiusure**: orari di apertura, pause del salone, chiusure straordinarie (anche ricorrenti,
+  Pasqua e Pasquetta) con festività italiane suggerite, blocchi orari.
 - **Mobile**: sidebar a scomparsa, layout a una colonna, verificato a 390px.
 
 L'elenco completo, con l'endpoint del Backend dietro ogni azione, è in

@@ -157,6 +157,13 @@ export type Service = {
 
 export type StaffServiceAssignment = { serviceId: string; priceOverride: number | null };
 
+export type StaffBusinessHoursItem = {
+  dayOfWeek: number; // 0 = domenica … 6 = sabato
+  isAvailable: boolean;
+  startTime: string | null;
+  endTime: string | null;
+};
+
 export type Staff = {
   id: string;
   name: string;
@@ -166,9 +173,69 @@ export type Staff = {
   active: boolean;
   displayOrder: number;
   services: StaffServiceAssignment[];
+  businessHours: StaffBusinessHoursItem[]; // sempre 7 voci ordinate
   deletedAt: string | null;
   businessHoursConfigured: boolean;
 };
+
+/** POST /admin/staff e PUT /admin/staff/{id}: SOSTITUZIONE completa. businessHours: 7 voci obbligatorie. */
+export type StaffWriteRequest = {
+  name: string;
+  role: string | null;
+  specialization: string | null;
+  photoUrl: string | null;
+  active: boolean;
+  displayOrder: number;
+  services: StaffServiceAssignment[];
+  businessHours: StaffBusinessHoursItem[];
+};
+
+/** POST /admin/services e PUT /admin/services/{id}: SOSTITUZIONE completa (un campo omesso viene azzerato). */
+export type ServiceWriteRequest = {
+  name: string;
+  category: string | null;
+  description: string | null;
+  durationMinutes: number;
+  basePrice: number | null;
+  parallelSlots: number;
+  bufferEnabled: boolean;
+  bufferMinutes: number;
+  bufferPosition: "Before" | "After" | "Both";
+  active: boolean;
+  displayOrder: number;
+  color: string | null;
+};
+
+export type BusinessHoursItem = {
+  dayOfWeek: number;
+  isOpen: boolean;
+  openTime: string | null;
+  closeTime: string | null;
+};
+export type AdminBusinessHours = { configured: boolean; days: BusinessHoursItem[] };
+
+export type BreakItem = { dayOfWeek: number; startTime: string; endTime: string; label: string | null };
+export type StaffBreaksGroup = { staffId: string; staffName: string; breaks: BreakItem[] };
+export type BreaksResponse = { tenant: BreakItem[]; staff: StaffBreaksGroup[] };
+
+export type ClosureRecurrence = "none" | "annual" | "easter" | "easter_monday";
+export type Closure = { id: string; dateFrom: string; dateTo: string; reason: string | null; recurrence: ClosureRecurrence };
+export type ClosureRequest = { dateFrom: string; dateTo: string; reason: string | null; recurrence: ClosureRecurrence };
+export type Holiday = { date: string; name: string; recurrence: ClosureRecurrence };
+
+export type TimeBlock = { id: string; dateFrom: string; dateTo: string; startTime: string; endTime: string; reason: string | null };
+export type TimeBlockRequest = Omit<TimeBlock, "id">;
+
+export type StaffTimeOffReason = "vacation" | "illness" | "personal_leave" | "other";
+export type StaffTimeOff = {
+  id: string;
+  dateFrom: string;
+  dateTo: string;
+  startTime: string | null;
+  endTime: string | null;
+  reason: StaffTimeOffReason | null;
+};
+export type StaffTimeOffRequest = Omit<StaffTimeOff, "id">;
 
 export type AvailabilitySlot = { time: string; available: boolean; reason: string | null };
 export type AvailabilityDay = {

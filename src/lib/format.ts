@@ -88,3 +88,26 @@ export function reasonLabel(reason: string | null | undefined): string {
   if (!reason) return "";
   return UNAVAILABLE_REASON[reason] ?? reason;
 }
+
+export const DAY_LABEL = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
+export const DAY_SHORT = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+
+export const RECURRENCE_LABEL: Record<string, string> = {
+  none: "Una tantum",
+  annual: "Ogni anno",
+  easter: "Pasqua",
+  easter_monday: "Lunedì dell'Angelo",
+};
+
+export const TIME_OFF_REASON_LABEL: Record<string, string> = {
+  vacation: "Ferie",
+  illness: "Malattia",
+  personal_leave: "Permesso",
+  other: "Altro",
+};
+
+export const BUFFER_POSITION_LABEL: Record<string, string> = {
+  Before: "Prima",
+  After: "Dopo",
+  Both: "Prima e dopo",
+};
