@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* WHY: tema chiaro fisso, come la dashboard interna: il pannello è uno strumento di lavoro con dati densi
+   (agenda, tabelle) e un tema scuro automatico da preferenza di sistema renderebbe i badge colorati degli
+   stati meno leggibili senza una seconda palette validata. */
+html {
+  color-scheme: light;
+}
+
+body {
+  font-family: var(--font-sans);
+}
