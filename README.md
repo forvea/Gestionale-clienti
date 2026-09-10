@@ -45,7 +45,7 @@ contatti (422), quanto basta per vedere i messaggi d'errore nei form. I dati si 
 | Variabile | Obbligatoria | Descrizione |
 |---|---|---|
 | `API_BASE_URL` | sì | URL pubblico del Backend, senza slash finale. Letta **solo lato server**: il browser non la vede mai |
-| `PORT` | no | Porta del server (Railway la inietta da sé; default 3000) |
+| `PORT` | sì su Railway | Porta su cui ascolta il server. **Deve coincidere con il target port del dominio**: Railway di default inietta `8080` mentre il dominio generato punta alla `3000` — senza `PORT=3000` (o un dominio sulla 8080) il sito non risponde, con deploy verde e log puliti |
 
 Non esistono altre variabili: nessun segreto vive in questo progetto. Le credenziali le detiene il
 titolare, il JWT lo emette il Backend.
@@ -68,8 +68,10 @@ Prima di ogni commit: `npm run typecheck && npm run lint && npm run build` devon
 Il repository contiene un `Dockerfile` a tre stadi; Railway lo rileva da solo.
 
 1. Nuovo servizio dal repo GitHub `forvea/gestionale-clienti`, branch `main`.
-2. Variabile `API_BASE_URL=https://<backend>.up.railway.app`.
-3. Genera un dominio pubblico dal pannello del servizio.
+2. Variabili `API_BASE_URL=https://<backend>.up.railway.app` e `PORT=3000`.
+3. Il deploy automatico al push non parte finché il servizio non ha un deployment riuscito: il primo va
+   avviato ricollegando la sorgente (o da dashboard). Un cambio di variabile da solo non basta.
+4. Genera un dominio pubblico dal pannello del servizio.
 
 Non serve altro: il server standalone legge `PORT` e ascolta su `0.0.0.0`.
 
