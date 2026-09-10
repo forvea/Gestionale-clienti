@@ -58,7 +58,10 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
     if (!token) redirect("/login");
     headers.Authorization = `Bearer ${token}`;
   }
-  if (opts.body !== undefined) headers["Content-Type"] = "application/json";
+  // WHY: con un FormData (upload del logo) il Content-Type lo imposta fetch, con il boundary del multipart;
+  // metterlo a mano lo romperebbe.
+  const isMultipart = typeof FormData !== "undefined" && opts.body instanceof FormData;
+  if (opts.body !== undefined && !isMultipart) headers["Content-Type"] = "application/json";
 
   const url = new URL(baseUrl() + path);
   for (const [k, v] of Object.entries(opts.query ?? {})) {
@@ -69,7 +72,7 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   const res = await fetch(url, {
     method: opts.method ?? "GET",
     headers,
-    body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+    body: opts.body === undefined ? undefined : isMultipart ? (opts.body as FormData) : JSON.stringify(opts.body),
     cache: "no-store",
   });
 

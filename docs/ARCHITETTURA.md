@@ -175,9 +175,12 @@ src/
         │   ├── page.tsx · StaffForm.tsx · StaffExtras.tsx (pause, assenze)
         │   ├── actions.ts           createStaff, updateStaff, deleteStaff, saveStaffBreaks, addTimeOff, deleteTimeOff
         │   └── [id]/page.tsx · nuovo/page.tsx
-        └── orari/
-            ├── page.tsx · OrariForms.tsx
-            └── actions.ts           saveBusinessHours, saveTenantBreaks, addClosure, deleteClosure, addTimeBlock, deleteTimeBlock
+        ├── orari/
+        │   ├── page.tsx · OrariForms.tsx
+        │   └── actions.ts           saveBusinessHours, saveTenantBreaks, addClosure, deleteClosure, addTimeBlock, deleteTimeBlock
+        └── impostazioni/
+            ├── page.tsx · SettingsForm.tsx
+            └── actions.ts           updateTenant (PATCH per differenza), uploadLogo (multipart)
 scripts/mock-api.mjs                 finto Backend in memoria (vedi §8)
 Dockerfile · .dockerignore           immagine di produzione (vedi §9)
 ```
@@ -291,6 +294,17 @@ di un cliente segnalato, e il pannello lo dice sotto la casella.
 Tutto ciò che rende non prenotabile del tempo per l'**intero salone** sta in questa pagina; ciò che riguarda
 un **singolo operatore** (pause, assenze) sta nella sua scheda. È la stessa distinzione che il Backend fa
 fra i suoi cinque strumenti di indisponibilità.
+
+### Impostazioni (`/impostazioni`)
+
+| Funzione | Endpoint | Note |
+|---|---|---|
+| Lettura | `GET /tenant` | Nome, slug e fuso orario in **sola lettura** (il Backend li ignora nel PATCH: è una scelta, non un rinvio) |
+| Contatti, link, colore, interruttori | `PATCH /tenant` | **Per differenza** (§6): testo `null` = non toccare, `""` = svuota; interruttori `bool` solo se cambiati. Il colore viaggia solo con la casella "usa un colore" accesa, altrimenti `""` lo azzera |
+| Link di gestione prenotazione | `bookingManagementPath` | Percorso relativo sul sito del salone; un URL assoluto è rifiutato (422) perché il link porta il token della prenotazione |
+| Link recensioni Google | `googleReviewUrl` | Regola opposta: `https://` assoluto obbligatorio. Senza, la richiesta di recensione non parte anche se attiva |
+| Cinque interruttori email | `email*Enabled` | Conferma, promemoria, disdetta, notifica al titolare, richiesta di recensione. Effetto immediato (cache invalidata lato Backend) |
+| Logo | `POST /tenant/logo` (multipart) | PNG/JPEG/WebP dai magic bytes, max 2 MB; `api()` passa il `FormData` senza `Content-Type` così `fetch` mette il boundary. Il logo è un `<img>` nativo verso il CDN |
 
 ### Trasversali
 
@@ -449,15 +463,14 @@ Due cose imparate deployando altri servizi Forvea su Railway, valide anche qui:
 
 ## 10. Cosa NON fa, e cosa aggiungere dopo
 
-Scelte di scope, non dimenticanze. Servizi, operatori, orari, pause, chiusure, blocchi e assenze sono
-coperti dal 2026-09-10. Il Backend espone già tutto il necessario: si tratta solo di
+Scelte di scope, non dimenticanze. Servizi, operatori, orari, pause, chiusure, blocchi, assenze e impostazioni
+del salone sono coperti dal 2026-09-10. Il Backend espone già tutto il necessario: si tratta solo di
 aggiungere pagine.
 
 | Area | Endpoint già disponibili |
 |---|---|
 | Vista aggregata delle assenze di tutti gli operatori | `GET /admin/time-off` (oggi le assenze si vedono solo per operatore) |
 | Foto dell'operatore | `photoUrl` su `/admin/staff` (il form lo invia sempre `null`) |
-| Impostazioni salone (indirizzo, colore, logo, interruttori email, link recensioni) | `GET|PATCH /admin/tenant`, `POST /admin/tenant/logo` |
 | Unione schede duplicate, scoperta duplicati, export CSV | `/admin/customers/{id}/merge`, `/duplicates`, `/export` |
 | Registro di audit | `GET /admin/audit-log` |
 | Cambio password, reset via email | `/admin/account/password*` |

@@ -244,3 +244,35 @@ export type AvailabilityDay = {
   reason: string | null;
   slots: AvailabilitySlot[];
 };
+
+export type AdminTenant = {
+  tenantId: string;
+  name: string;
+  slug: string;
+  timezone: string;
+  address: string | null;
+  phone: string | null;
+  color: string | null;
+  logoUrl: string | null;
+  bookingManagementPath: string | null;
+  googleReviewUrl: string | null;
+  emailConfirmationEnabled: boolean;
+  emailReminderEnabled: boolean;
+  emailCancellationEnabled: boolean;
+  emailOwnerNotificationEnabled: boolean;
+  emailReviewRequestEnabled: boolean;
+};
+
+/** PATCH /admin/tenant: testo null = non toccare, "" = svuota; bool null = non toccare. */
+export type AdminUpdateTenantRequest = {
+  address?: string | null;
+  phone?: string | null;
+  color?: string | null;
+  bookingManagementPath?: string | null;
+  googleReviewUrl?: string | null;
+  emailConfirmationEnabled?: boolean | null;
+  emailReminderEnabled?: boolean | null;
+  emailCancellationEnabled?: boolean | null;
+  emailOwnerNotificationEnabled?: boolean | null;
+  emailReviewRequestEnabled?: boolean | null;
+};

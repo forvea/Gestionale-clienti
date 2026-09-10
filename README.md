@@ -99,7 +99,8 @@ src/
         ├── clienti/          elenco, scheda, nuovo cliente
         ├── servizi/          catalogo, nuovo, modifica
         ├── operatori/        elenco, nuovo, scheda (orari, servizi, pause, assenze)
-        └── orari/            orari di apertura, pause, chiusure, blocchi
+        ├── orari/            orari di apertura, pause, chiusure, blocchi
+        └── impostazioni/     contatti, link, email automatiche, colore, logo
 scripts/mock-api.mjs          finto Backend per lo sviluppo
 docs/ARCHITETTURA.md          come è fatto, perché, e cosa fa
 docs/GUIDA_CONSEGNA.md        come consegnarlo a un salone e come si usa
@@ -123,6 +124,8 @@ docs/GUIDA_CONSEGNA.md        come consegnarlo a un salone e come si usa
   ricorrenti, assenze (giornata o fascia, motivo a categoria), eliminazione.
 - **Orari e chiusure**: orari di apertura, pause del salone, chiusure straordinarie (anche ricorrenti,
   Pasqua e Pasquetta) con festività italiane suggerite, blocchi orari.
+- **Impostazioni**: contatti, link di gestione prenotazione e recensioni Google, cinque interruttori
+  email, colore e logo del salone.
 - **Mobile**: sidebar a scomparsa, layout a una colonna, verificato a 390px.
 
 L'elenco completo, con l'endpoint del Backend dietro ogni azione, è in

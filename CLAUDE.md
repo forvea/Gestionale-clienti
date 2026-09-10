@@ -40,6 +40,7 @@ nel browser (vedi `docs/ARCHITETTURA.md` §8). Guarda gli screenshot, non contar
 Verificato end-to-end sul mock (2026-09-10): login, agenda con filtri, dettaglio con cambio stato /
 spostamento / cambio operatore / recapiti, nuova prenotazione, clienti (elenco, scheda, modifica,
 archiviazione, nuova scheda), servizi (CRUD), operatori (CRUD + orari settimanali + pause + assenze),
-orari e chiusure (orari, pause, chiusure con festività suggerite, blocchi), mobile. Le aree non ancora
-coperte (impostazioni salone, GDPR, calendario a griglia, cambio password) sono in `docs/ARCHITETTURA.md`
+orari e chiusure (orari, pause, chiusure con festività suggerite, blocchi), impostazioni del salone
+(PATCH per differenza + logo multipart), mobile. Le aree non ancora coperte (GDPR, calendario a
+griglia, cambio password) sono in `docs/ARCHITETTURA.md`
 §10 con gli endpoint già pronti lato Backend. Per consegnarlo a un salone: `docs/GUIDA_CONSEGNA.md`.

@@ -35,6 +35,7 @@ const staffBreaks = {};
 const timeOff = {};
 const closures = [{ id: "cl1", dateFrom: "2026-12-25", dateTo: "2026-12-26", reason: "Natale", recurrence: "annual" }];
 const timeBlocks = [];
+const tenant = { tenantId: "t1", name: "Barberia Demo", slug: "barberia-demo", timezone: "Europe/Rome", address: "Via Roma 1, Milano", phone: "0212345678", color: "#2563eb", logoUrl: null, bookingManagementPath: "/prenotazione", googleReviewUrl: null, emailConfirmationEnabled: true, emailReminderEnabled: true, emailCancellationEnabled: true, emailOwnerNotificationEnabled: true, emailReviewRequestEnabled: true };
 const today = new Date().toLocaleDateString("sv-SE");
 const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("sv-SE");
 const bookings = [
@@ -77,7 +78,7 @@ const overlaps = (a, b) => a.date === b.date && a.staffId && a.staffId === b.sta
 
 const json = (res, status, body) => { res.writeHead(status, { "Content-Type": "application/json" }); res.end(body === undefined ? "" : JSON.stringify(body)); };
 const err = (res, status, type, message, errors) => json(res, status, { type, message, errors: errors ?? null });
-const readBody = (req) => new Promise((resolve) => { let d = ""; req.on("data", (c) => (d += c)); req.on("end", () => resolve(d ? JSON.parse(d) : {})); });
+const readBody = (req) => new Promise((resolve) => { let d = ""; req.on("data", (c) => (d += c)); req.on("end", () => resolve(d && (req.headers["content-type"] ?? "").includes("json") ? JSON.parse(d) : {})); });
 
 createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
@@ -93,6 +94,17 @@ createServer(async (req, res) => {
   if (req.headers.authorization !== `Bearer ${TOKEN}`) return err(res, 401, "unauthorized", "Token mancante o non valido.");
 
   if (p === "/api/v1/admin/account/me") return json(res, 200, { userId: "u1", email: "titolare@barberia-demo.invalid", role: "Owner", active: true, activatedAt: now, lastLoginAt: now, createdAt: now, tenantId: "t1", tenantName: "Barberia Demo", tenantSlug: "barberia-demo" });
+  // ── tenant ──
+  if (p === "/api/v1/admin/tenant" && req.method === "GET") return json(res, 200, tenant);
+  if (p === "/api/v1/admin/tenant" && req.method === "PATCH") {
+    if (body.bookingManagementPath && !body.bookingManagementPath.startsWith("/")) return err(res, 422, "validation_error", "Dati non validi.", { bookingManagementPath: ["Deve essere un percorso relativo che inizia con /."] });
+    if (body.googleReviewUrl && !body.googleReviewUrl.startsWith("https://")) return err(res, 422, "validation_error", "Dati non validi.", { googleReviewUrl: ["Deve essere un URL assoluto https://."] });
+    for (const k of ["address", "phone", "color", "bookingManagementPath", "googleReviewUrl"]) if (body[k] != null) tenant[k] = body[k] || null;
+    for (const k of ["emailConfirmationEnabled", "emailReminderEnabled", "emailCancellationEnabled", "emailOwnerNotificationEnabled", "emailReviewRequestEnabled"]) if (body[k] != null) tenant[k] = !!body[k];
+    return json(res, 200, tenant);
+  }
+  if (p === "/api/v1/admin/tenant/logo" && req.method === "POST") { tenant.logoUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="; return json(res, 200, tenant); }
+
   // ── services ──
   const visibleServices = () => q.get("includeDeleted") === "true" ? services : services.filter((s) => !s.deletedAt);
   const serviceFromBody = (id) => ({ id, name: body.name, category: body.category ?? null, description: body.description ?? null, durationMinutes: body.durationMinutes, basePrice: body.basePrice ?? null, parallelSlots: body.parallelSlots ?? 1, bufferEnabled: !!body.bufferEnabled, bufferMinutes: body.bufferMinutes ?? 0, bufferPosition: body.bufferPosition ?? "After", active: body.active ?? true, displayOrder: body.displayOrder ?? 0, deletedAt: null, color: body.color ?? null });

@@ -174,6 +174,11 @@ li tocca.
 con le festività italiane proposte a un click, blocchi orari (una fascia non prenotabile per tutti, per
 esempio una riunione).
 
+**Impostazioni.** Indirizzo e telefono (finiscono nelle email ai clienti), il percorso della pagina di
+gestione prenotazione sul sito del salone, il link alla scheda Google per le recensioni, i cinque
+interruttori delle email automatiche, il colore e il logo usati nelle email. Nome, identificativo e fuso
+orario non si cambiano da qui: li imposta l'agenzia alla creazione.
+
 **Su telefono** funziona tutto: il menu si apre dall'icona in alto a sinistra.
 
 ## 6. Se il titolare non riesce a entrare

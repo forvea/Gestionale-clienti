@@ -16,6 +16,7 @@ const NAV = [
   { href: "/servizi", label: "Servizi", icon: "✂️" },
   { href: "/operatori", label: "Operatori", icon: "🧑‍💼" },
   { href: "/orari", label: "Orari e chiusure", icon: "🕒" },
+  { href: "/impostazioni", label: "Impostazioni", icon: "⚙️" },
 ] as const;
 
 export function Shell({
